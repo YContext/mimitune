@@ -107,4 +107,6 @@ core.*
 
 # AI code review
 /.qodo/
-/.github/copilot-instructions.md
+/.github/copilot-instructions.md__pycache__/
+*.egg-info/
+*.pyc

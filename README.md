@@ -17,7 +17,7 @@ from mimitune import YTMusic
 yt = YTMusic()
 
 # Search for songs
-results = yt.search("Bohemian Rhapsody")
+results = yt.search("Alan Walker Faded")
 for song in results.items:
     print(f"{song.title} - {[a.name for a in song.artists]}")
 

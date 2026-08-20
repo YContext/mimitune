@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mimitune"
-version = "1.0.0"
+version = "1.0.1"
 description = "A Python client library for YouTube Music, rewritten from the OpenTune Android app's InnerTube implementation"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "GPL-3.0-only" }
 authors = [
-    { name = "Arturo Cervantes" }
+    { name = "ByteJoseph" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -33,6 +33,9 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/YContext/mimitune"
 
 [tool.setuptools.packages.find]
 include = ["mimitune*"]

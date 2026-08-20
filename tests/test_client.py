@@ -1,5 +1,5 @@
 import pytest
-from opentune_ytmusic import (
+from mimitune import (
     YTMusic,
     InnerTubeClient,
     PlaybackAuthState,
@@ -14,7 +14,7 @@ from opentune_ytmusic import (
     HistoryPage,
     TranscriptCue,
 )
-from opentune_ytmusic.parsers import (
+from mimitune.parsers import (
     parse_search_summary_response,
     parse_search_response,
     parse_album_response,

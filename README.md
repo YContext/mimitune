@@ -1,17 +1,17 @@
-# opentune-ytmusic
+# mimitune
 
 A Python client library for YouTube Music, rewritten from the OpenTune Android app's InnerTube implementation.
 
 ## Installation
 
 ```bash
-pip install opentune-ytmusic
+pip install mimitune
 ```
 
 ## Quick Start
 
 ```python
-from opentune_ytmusic import YTMusic
+from mimitune import YTMusic
 
 # Create a client (no auth required for basic usage)
 yt = YTMusic()
@@ -34,7 +34,7 @@ for group in summary.summaries:
 Some features (library, playlists, likes) require authentication via cookies:
 
 ```python
-from opentune_ytmusic import YTMusic
+from mimitune import YTMusic
 
 yt = YTMusic(
     cookie="SAPISID=your_sapisid_value; __Secure-3PAPISID=your_value;",
@@ -175,7 +175,7 @@ yt.set_proxy("socks5://proxy:1080")
 For direct InnerTube API access:
 
 ```python
-from opentune_ytmusic import InnerTubeClient, WEB_REMIX
+from mimitune import InnerTubeClient, WEB_REMIX
 
 client = InnerTubeClient(default_client=WEB_REMIX)
 

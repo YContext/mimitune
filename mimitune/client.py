@@ -9,7 +9,7 @@ import urllib.parse
 from typing import Dict, Any, Optional, List, Union
 import httpx
 
-from opentune_ytmusic.models import (
+from mimitune.models import (
     YouTubeLocale,
     PlaybackAuthState,
     YouTubeClientPreset,

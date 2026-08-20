@@ -5,7 +5,7 @@ High-level YouTube Music API wrapper for OpenTune YouTube Music Client.
 from typing import Optional, Dict, Any, List
 import httpx
 
-from opentune_ytmusic.models import (
+from mimitune.models import (
     YouTubeLocale,
     PlaybackAuthState,
     YouTubeClientPreset,
@@ -32,8 +32,8 @@ from opentune_ytmusic.models import (
     PlayerResponse,
     TranscriptCue,
 )
-from opentune_ytmusic.client import InnerTubeClient
-from opentune_ytmusic.parsers import (
+from mimitune.client import InnerTubeClient
+from mimitune.parsers import (
     parse_search_summary_response,
     parse_search_response,
     parse_album_response,

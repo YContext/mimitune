@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "opentune-ytmusic"
+name = "mimitune"
 version = "0.1.0"
 description = "A Python client library for YouTube Music, rewritten from the OpenTune Android app's InnerTube implementation"
 readme = "README.md"
@@ -35,4 +35,4 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["opentune_ytmusic*"]
+include = ["mimitune*"]

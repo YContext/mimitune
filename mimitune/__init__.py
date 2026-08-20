@@ -3,7 +3,7 @@ OpenTune YouTube Music API Python Package.
 Rewritten from OpenTune Android App (InnerTube API).
 """
 
-from opentune_ytmusic.models import (
+from mimitune.models import (
     YouTubeLocale,
     PlaybackAuthState,
     YouTubeClientPreset,
@@ -37,8 +37,8 @@ from opentune_ytmusic.models import (
     NextResult,
     PlayerResponse,
 )
-from opentune_ytmusic.client import InnerTubeClient
-from opentune_ytmusic.api import YTMusic
+from mimitune.client import InnerTubeClient
+from mimitune.api import YTMusic
 
 __all__ = [
     "YouTubeLocale",

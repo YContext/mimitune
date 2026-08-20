@@ -3,7 +3,7 @@ Parsers for transforming InnerTube API JSON responses into structured models.
 """
 
 from typing import List, Optional, Dict, Any
-from opentune_ytmusic.models import (
+from mimitune.models import (
     SongItem, AlbumItem, ArtistItem, PlaylistItem, Artist,
     SearchSummary, SearchSummaryPage, SearchResult,
     AlbumPage, PlaylistPage, HomeSection, HomePage,

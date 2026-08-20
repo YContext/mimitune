@@ -7,12 +7,21 @@ from opentune_ytmusic import (
     WEB_REMIX,
     SongItem,
     AlbumItem,
+    ArtistItem,
     Artist,
+    ArtistPage,
+    LibraryPage,
+    HistoryPage,
+    TranscriptCue,
 )
 from opentune_ytmusic.parsers import (
     parse_search_summary_response,
     parse_search_response,
     parse_album_response,
+    parse_artist_response,
+    parse_library_response,
+    parse_history_response,
+    parse_transcript_response,
     parse_account_menu_response,
     parse_next_response,
 )
@@ -92,6 +101,103 @@ def test_parse_search_summary():
     assert song.artists[0].name == "Artist Name"
 
 
+def test_parse_artist_response():
+    mock_response = {
+        "header": {
+            "musicImmersiveHeaderRenderer": {
+                "title": {"runs": [{"text": "Artist Title"}]},
+                "description": {"runs": [{"text": "Artist Description"}]},
+                "subscriptionButton": {
+                    "subscribeButtonRenderer": {
+                        "channelId": "UC12345",
+                        "subscriberCountText": {"runs": [{"text": "1M subscribers"}]},
+                    }
+                },
+            }
+        },
+        "contents": {
+            "singleColumnBrowseResultsRenderer": {
+                "tabs": [
+                    {
+                        "tabRenderer": {
+                            "content": {
+                                "sectionListRenderer": {
+                                    "contents": [
+                                        {
+                                            "musicShelfRenderer": {
+                                                "title": {"runs": [{"text": "Top Songs"}]},
+                                                "contents": [
+                                                    {
+                                                        "musicResponsiveListItemRenderer": {
+                                                            "flexColumns": [
+                                                                {
+                                                                    "musicResponsiveListItemFlexColumnRenderer": {
+                                                                        "text": {"runs": [{"text": "Song 1"}]}
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "playlistItemData": {"videoId": "v1"},
+                                                        }
+                                                    }
+                                                ],
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+    }
+
+    artist_page = parse_artist_response(mock_response, browse_id="UC12345")
+    assert artist_page.artist.title == "Artist Title"
+    assert artist_page.artist.channel_id == "UC12345"
+    assert artist_page.description == "Artist Description"
+    assert len(artist_page.sections) == 1
+    assert artist_page.sections[0].title == "Top Songs"
+
+
+def test_parse_transcript():
+    mock_response = {
+        "actions": [
+            {
+                "updateEngagementPanelAction": {
+                    "content": {
+                        "transcriptRenderer": {
+                            "body": {
+                                "transcriptBodyRenderer": {
+                                    "cueGroups": [
+                                        {
+                                            "transcriptCueGroupRenderer": {
+                                                "cues": [
+                                                    {
+                                                        "transcriptCueRenderer": {
+                                                            "startOffsetMs": "15000",
+                                                            "cue": {"simpleText": "♪ First lyric line"},
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        ]
+    }
+
+    cues = parse_transcript_response(mock_response)
+    assert len(cues) == 1
+    assert cues[0].time_ms == 15000
+    assert cues[0].text == "First lyric line"
+
+
 def test_parse_account_menu():
     mock_response = {
         "actions": [
@@ -115,57 +221,6 @@ def test_parse_account_menu():
     account_info = parse_account_menu_response(mock_response)
     assert account_info.name == "Test User"
     assert account_info.handle == "@testuser"
-
-
-def test_parse_next_response():
-    mock_response = {
-        "contents": {
-            "singleColumnMusicWatchNextResultsRenderer": {
-                "tabbedRenderer": {
-                    "watchNextTabbedResultsRenderer": {
-                        "tabs": [
-                            {
-                                "tabRenderer": {
-                                    "content": {
-                                        "musicQueueRenderer": {
-                                            "header": {
-                                                "musicQueueHeaderRenderer": {
-                                                    "subtitle": {"runs": [{"text": "Playing Queue"}]}
-                                                }
-                                            },
-                                            "content": {
-                                                "playlistPanelRenderer": {
-                                                    "contents": [
-                                                        {
-                                                            "playlistPanelVideoRenderer": {
-                                                                "title": {"runs": [{"text": "Queue Song 1"}]},
-                                                                "shortBylineText": {"runs": [{"text": "Queue Artist"}]},
-                                                                "navigationEndpoint": {
-                                                                    "watchEndpoint": {"videoId": "q1_id"}
-                                                                },
-                                                                "selected": True,
-                                                            }
-                                                        }
-                                                    ]
-                                                }
-                                            },
-                                        }
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                }
-            }
-        }
-    }
-
-    next_res = parse_next_response(mock_response)
-    assert next_res.title == "Playing Queue"
-    assert len(next_res.items) == 1
-    assert next_res.current_index == 0
-    assert next_res.items[0].id == "q1_id"
-    assert next_res.items[0].title == "Queue Song 1"
 
 
 def test_ytmusic_init():

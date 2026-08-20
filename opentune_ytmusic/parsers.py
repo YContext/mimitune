@@ -7,7 +7,9 @@ from opentune_ytmusic.models import (
     SongItem, AlbumItem, ArtistItem, PlaylistItem, Artist,
     SearchSummary, SearchSummaryPage, SearchResult,
     AlbumPage, PlaylistPage, HomeSection, HomePage,
-    ExplorePage, ChartSection, ChartsPage, AccountInfo, NextResult
+    ExplorePage, ChartSection, ChartsPage, AccountInfo, NextResult,
+    ArtistSection, ArtistPage, ArtistItemsPage, LibraryPage,
+    HistorySection, HistoryPage, TranscriptCue
 )
 
 
@@ -327,6 +329,123 @@ def parse_album_response(response: Dict[str, Any], browse_id: str) -> AlbumPage:
     return AlbumPage(album=album_item, songs=songs)
 
 
+def parse_artist_response(response: Dict[str, Any], browse_id: str) -> ArtistPage:
+    header = safe_get(response, "header", "musicImmersiveHeaderRenderer") or safe_get(response, "header", "musicVisualHeaderRenderer") or safe_get(response, "header", "musicHeaderRenderer") or {}
+    title = extract_runs_text(header.get("title")) or "Unknown Artist"
+    thumbnail = extract_thumbnail_url(header)
+    subscribers = extract_runs_text(safe_get(header, "subscriptionButton", "subscribeButtonRenderer", "subscriberCountText"))
+    monthly_listeners = extract_runs_text(header.get("monthlyListenerCount"))
+    channel_id = safe_get(header, "subscriptionButton", "subscribeButtonRenderer", "channelId")
+
+    artist_item = ArtistItem(
+        id=browse_id,
+        title=title,
+        thumbnail=thumbnail,
+        channel_id=channel_id,
+        subscriber_count_text=subscribers,
+        monthly_listener_count_text=monthly_listeners,
+    )
+
+    contents = safe_get(
+        response,
+        "contents",
+        "singleColumnBrowseResultsRenderer",
+        "tabs",
+        default=[]
+    )
+    section_contents = []
+    if contents and isinstance(contents, list):
+        section_contents = safe_get(
+            contents[0],
+            "tabRenderer",
+            "content",
+            "sectionListRenderer",
+            "contents",
+            default=[]
+        )
+
+    sections = []
+    for sec in section_contents:
+        if not isinstance(sec, dict):
+            continue
+        carousel = sec.get("musicCarouselShelfRenderer")
+        shelf = sec.get("musicShelfRenderer")
+
+        sec_title = None
+        sec_items = []
+
+        if carousel:
+            sec_title = extract_runs_text(safe_get(carousel, "header", "musicCarouselShelfBasicHeaderRenderer", "title")) or "Section"
+            for item in carousel.get("contents") or []:
+                parsed = parse_two_row_item(item.get("musicTwoRowItemRenderer") or {}) or parse_responsive_list_item(item)
+                if parsed:
+                    sec_items.append(parsed)
+        elif shelf:
+            sec_title = extract_runs_text(shelf.get("title")) or "Section"
+            for item in shelf.get("contents") or []:
+                parsed = parse_responsive_list_item(item) or parse_two_row_item(item.get("musicTwoRowItemRenderer") or {})
+                if parsed:
+                    sec_items.append(parsed)
+
+        if sec_items:
+            sections.append(ArtistSection(title=sec_title or "Section", items=sec_items))
+
+    desc = extract_runs_text(header.get("description"))
+
+    return ArtistPage(artist=artist_item, sections=sections, description=desc)
+
+
+def parse_artist_items_response(response: Dict[str, Any]) -> ArtistItemsPage:
+    contents = safe_get(
+        response,
+        "contents",
+        "singleColumnBrowseResultsRenderer",
+        "tabs",
+        default=[]
+    )
+    sec_contents = []
+    if contents and isinstance(contents, list):
+        sec_contents = safe_get(
+            contents[0],
+            "tabRenderer",
+            "content",
+            "sectionListRenderer",
+            "contents",
+            default=[]
+        )
+
+    title = "Artist Items"
+    items = []
+    continuation = None
+
+    for content in sec_contents:
+        if not isinstance(content, dict):
+            continue
+        grid = content.get("gridRenderer")
+        shelf = content.get("musicShelfRenderer") or content.get("musicPlaylistShelfRenderer")
+
+        if grid:
+            title = extract_runs_text(safe_get(grid, "header", "gridHeaderRenderer", "title")) or title
+            for item in grid.get("items") or []:
+                parsed = parse_two_row_item(item.get("musicTwoRowItemRenderer") or {})
+                if parsed:
+                    items.append(parsed)
+            conts = grid.get("continuations") or []
+            if conts and isinstance(conts, list):
+                continuation = safe_get(conts[0], "nextContinuationData", "continuation")
+        elif shelf:
+            title = extract_runs_text(shelf.get("title")) or title
+            for item in shelf.get("contents") or []:
+                parsed = parse_responsive_list_item(item)
+                if parsed:
+                    items.append(parsed)
+            conts = shelf.get("continuations") or []
+            if conts and isinstance(conts, list):
+                continuation = safe_get(conts[0], "nextContinuationData", "continuation")
+
+    return ArtistItemsPage(title=title, items=items, continuation=continuation)
+
+
 def parse_playlist_response(response: Dict[str, Any], playlist_id: str) -> PlaylistPage:
     two_col = safe_get(response, "contents", "twoColumnBrowseResultsRenderer", default={})
     tabs = two_col.get("tabs") or []
@@ -376,6 +495,105 @@ def parse_playlist_response(response: Dict[str, Any], playlist_id: str) -> Playl
     )
 
     return PlaylistPage(playlist=playlist_item, songs=songs)
+
+
+def parse_library_response(response: Dict[str, Any]) -> LibraryPage:
+    tabs = safe_get(response, "contents", "singleColumnBrowseResultsRenderer", "tabs", default=[])
+    sec_contents = safe_get(
+        tabs[0] if tabs and isinstance(tabs, list) else {},
+        "tabRenderer",
+        "content",
+        "sectionListRenderer",
+        "contents",
+        default=[]
+    )
+
+    items = []
+    continuation = None
+
+    for content in sec_contents:
+        if not isinstance(content, dict):
+            continue
+        grid = content.get("gridRenderer")
+        shelf = content.get("musicShelfRenderer")
+
+        if grid:
+            for item in grid.get("items") or []:
+                parsed = parse_two_row_item(item.get("musicTwoRowItemRenderer") or {})
+                if parsed:
+                    items.append(parsed)
+            conts = grid.get("continuations") or []
+            if conts and isinstance(conts, list):
+                continuation = safe_get(conts[0], "nextContinuationData", "continuation")
+        elif shelf:
+            for item in shelf.get("contents") or []:
+                parsed = parse_responsive_list_item(item)
+                if parsed:
+                    items.append(parsed)
+            conts = shelf.get("continuations") or []
+            if conts and isinstance(conts, list):
+                continuation = safe_get(conts[0], "nextContinuationData", "continuation")
+
+    return LibraryPage(items=items, continuation=continuation)
+
+
+def parse_history_response(response: Dict[str, Any]) -> HistoryPage:
+    tabs = safe_get(response, "contents", "singleColumnBrowseResultsRenderer", "tabs", default=[])
+    sec_contents = safe_get(
+        tabs[0] if tabs and isinstance(tabs, list) else {},
+        "tabRenderer",
+        "content",
+        "sectionListRenderer",
+        "contents",
+        default=[]
+    )
+
+    sections = []
+    for content in sec_contents:
+        if not isinstance(content, dict):
+            continue
+        shelf = content.get("musicShelfRenderer")
+        if shelf:
+            title = extract_runs_text(shelf.get("title")) or "History"
+            items = []
+            for item in shelf.get("contents") or []:
+                parsed = parse_responsive_list_item(item)
+                if isinstance(parsed, SongItem):
+                    items.append(parsed)
+            if items:
+                sections.append(HistorySection(title=title, items=items))
+
+    return HistoryPage(sections=sections)
+
+
+def parse_transcript_response(response: Dict[str, Any]) -> List[TranscriptCue]:
+    actions = response.get("actions") or []
+    if not actions or not isinstance(actions, list):
+        return []
+
+    cues_list = []
+    renderer = safe_get(
+        actions[0] if isinstance(actions[0], dict) else {},
+        "updateEngagementPanelAction",
+        "content",
+        "transcriptRenderer",
+        "body",
+        "transcriptBodyRenderer",
+        "cueGroups",
+        default=[]
+    )
+
+    for group in renderer:
+        if not isinstance(group, dict):
+            continue
+        cue_renderer = safe_get(group, "transcriptCueGroupRenderer", "cues", default=[])
+        if cue_renderer and isinstance(cue_renderer, list):
+            first_cue = safe_get(cue_renderer[0], "transcriptCueRenderer", default={})
+            time_ms = first_cue.get("startOffsetMs", 0)
+            text = safe_get(first_cue, "cue", "simpleText", default="").strip("♪ ").strip()
+            cues_list.append(TranscriptCue(time_ms=int(time_ms), text=text))
+
+    return cues_list
 
 
 def parse_account_menu_response(response: Dict[str, Any]) -> AccountInfo:

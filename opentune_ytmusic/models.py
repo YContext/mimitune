@@ -183,10 +183,23 @@ class AlbumPage:
 
 
 @dataclass
+class ArtistSection:
+    title: str
+    items: List[Any] = field(default_factory=list)
+
+
+@dataclass
 class ArtistPage:
     artist: ArtistItem
-    sections: List[Dict[str, Any]] = field(default_factory=list)
+    sections: List[ArtistSection] = field(default_factory=list)
     description: Optional[str] = None
+
+
+@dataclass
+class ArtistItemsPage:
+    title: str
+    items: List[Any] = field(default_factory=list)
+    continuation: Optional[str] = None
 
 
 @dataclass
@@ -230,6 +243,23 @@ class ChartsPage:
 
 
 @dataclass
+class LibraryPage:
+    items: List[Any] = field(default_factory=list)
+    continuation: Optional[str] = None
+
+
+@dataclass
+class HistorySection:
+    title: str
+    items: List[SongItem] = field(default_factory=list)
+
+
+@dataclass
+class HistoryPage:
+    sections: List[HistorySection] = field(default_factory=list)
+
+
+@dataclass
 class AccountInfo:
     name: Optional[str] = None
     handle: Optional[str] = None
@@ -250,6 +280,12 @@ class MediaInfo:
     view_count: Optional[int] = None
     like: Optional[int] = None
     dislike: Optional[int] = None
+
+
+@dataclass
+class TranscriptCue:
+    time_ms: int
+    text: str
 
 
 @dataclass

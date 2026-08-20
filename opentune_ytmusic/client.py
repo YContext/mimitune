@@ -2,6 +2,7 @@
 InnerTube HTTP client for communicating directly with YouTube Music endpoints.
 """
 
+import base64
 import hashlib
 import time
 import urllib.parse
@@ -44,6 +45,9 @@ class InnerTubeClient:
         self.auth_state = auth_state or PlaybackAuthState()
         self.default_client = default_client
         self.timeout = timeout
+        self.proxy = proxy
+
+    def set_proxy(self, proxy: Optional[str]) -> None:
         self.proxy = proxy
 
     def _get_http_client(self) -> httpx.Client:
@@ -246,10 +250,37 @@ class InnerTubeClient:
         }
         return self.post("music/get_search_suggestions", body, client=preset)
 
+    def get_transcript(self, video_id: str) -> Dict[str, Any]:
+        preset = WEB
+        encoded_params = base64.b64encode(f"\n\x0b{video_id}".encode("utf-8")).decode("utf-8")
+        body = {
+            "context": self._build_context(preset),
+            "params": encoded_params,
+        }
+        url = "https://music.youtube.com/youtubei/v1/get_transcript"
+        params = {"key": "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX3"}
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": preset.user_agent,
+        }
+        with self._get_http_client() as http:
+            res = http.post(url, json=body, headers=headers, params=params)
+            res.raise_for_status()
+            return res.json()
+
     def account_menu(self, client: Optional[YouTubeClientPreset] = None) -> Dict[str, Any]:
         preset = client or self.default_client
         body = {"context": self._build_context(preset, set_login=True)}
         return self.post("account/account_menu", body, client=preset, set_login=True)
+
+    def subscribe_channel(self, channel_id: str, subscribe: bool = True, client: Optional[YouTubeClientPreset] = None) -> Dict[str, Any]:
+        preset = client or self.default_client
+        endpoint = "subscription/subscribe" if subscribe else "subscription/unsubscribe"
+        body = {
+            "context": self._build_context(preset, set_login=True),
+            "channelIds": [channel_id],
+        }
+        return self.post(endpoint, body, client=preset, set_login=True)
 
     def like_video(self, video_id: str, like: bool = True, client: Optional[YouTubeClientPreset] = None) -> Dict[str, Any]:
         preset = client or self.default_client
@@ -307,3 +338,31 @@ class InnerTubeClient:
             "playlistId": playlist_id,
         }
         return self.post("playlist/delete", body, client=preset, set_login=True)
+
+    def register_playback(
+        self,
+        playback_url: str,
+        cpn: str,
+        playlist_id: Optional[str] = None,
+        po_token: Optional[str] = None,
+        client: Optional[YouTubeClientPreset] = None,
+    ) -> httpx.Response:
+        preset = client or self.default_client
+        url = playback_url.replace("https://s.youtube.com", "https://music.youtube.com")
+        params = {
+            "ver": "2",
+            "c": preset.client_name,
+            "cpn": cpn,
+        }
+        resolved_po = po_token or self.auth_state.po_token
+        if resolved_po:
+            params["pot"] = resolved_po
+        if playlist_id:
+            params["list"] = playlist_id
+            params["referrer"] = f"https://music.youtube.com/playlist?list={playlist_id}"
+
+        headers = self._build_headers(preset, set_login=True)
+        with self._get_http_client() as http:
+            res = http.get(url, headers=headers, params=params)
+            res.raise_for_status()
+            return res

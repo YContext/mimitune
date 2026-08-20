@@ -18,21 +18,31 @@ from opentune_ytmusic.models import (
     SearchSummaryPage,
     SearchResult,
     AlbumPage,
+    ArtistPage,
+    ArtistItemsPage,
     PlaylistPage,
     ExplorePage,
     ChartsPage,
     ChartSection,
+    LibraryPage,
+    HistoryPage,
     AccountInfo,
     MediaInfo,
     NextResult,
     PlayerResponse,
+    TranscriptCue,
 )
 from opentune_ytmusic.client import InnerTubeClient
 from opentune_ytmusic.parsers import (
     parse_search_summary_response,
     parse_search_response,
     parse_album_response,
+    parse_artist_response,
+    parse_artist_items_response,
     parse_playlist_response,
+    parse_library_response,
+    parse_history_response,
+    parse_transcript_response,
     parse_account_menu_response,
     parse_next_response,
     extract_runs_text,
@@ -40,6 +50,7 @@ from opentune_ytmusic.parsers import (
     extract_thumbnail_url,
     parse_two_row_item,
     parse_responsive_list_item,
+    safe_get,
 )
 
 
@@ -67,6 +78,9 @@ class YTMusic:
             proxy=proxy,
         )
 
+    def set_proxy(self, proxy: Optional[str]) -> None:
+        self.client.set_proxy(proxy)
+
     def search_summary(self, query: str) -> SearchSummaryPage:
         response = self.client.search(query=query)
         return parse_search_summary_response(response)
@@ -88,10 +102,47 @@ class YTMusic:
         response = self.client.browse(browse_id=browse_id)
         return parse_album_response(response, browse_id)
 
+    def get_artist(self, browse_id: str) -> ArtistPage:
+        response = self.client.browse(browse_id=browse_id)
+        return parse_artist_response(response, browse_id)
+
+    def get_artist_items(
+        self, browse_id: str, params: Optional[str] = None, continuation: Optional[str] = None
+    ) -> ArtistItemsPage:
+        response = self.client.browse(
+            browse_id=browse_id,
+            params=params,
+            continuation=continuation,
+        )
+        return parse_artist_items_response(response)
+
     def get_playlist(self, playlist_id: str) -> PlaylistPage:
         clean_id = playlist_id if playlist_id.startswith("VL") else f"VL{playlist_id}"
         response = self.client.browse(browse_id=clean_id, set_login=True)
         return parse_playlist_response(response, playlist_id)
+
+    def get_library(self, browse_id: str = "FEmusic_library_landing", continuation: Optional[str] = None) -> LibraryPage:
+        response = self.client.browse(
+            browse_id=browse_id,
+            continuation=continuation,
+            set_login=True,
+        )
+        return parse_library_response(response)
+
+    def get_library_recent_activity(self) -> LibraryPage:
+        continuation = "4qmFsgIrEhdGRW11c2ljX2xpYnJhcnlfbGFuZGluZxoQZ2dNR0tnUUlCaEFCb0FZQg%3D%3D"
+        response = self.client.browse(
+            continuation=continuation,
+            set_login=True,
+        )
+        return parse_library_response(response)
+
+    def get_history(self) -> HistoryPage:
+        response = self.client.browse(
+            browse_id="FEmusic_history",
+            set_login=True,
+        )
+        return parse_history_response(response)
 
     def get_explore(self) -> ExplorePage:
         response = self.client.browse(browse_id="FEmusic_explore")
@@ -206,9 +257,16 @@ class YTMusic:
         )
         return extract_runs_text(contents)
 
+    def get_transcript(self, video_id: str) -> List[TranscriptCue]:
+        response = self.client.get_transcript(video_id)
+        return parse_transcript_response(response)
+
     def get_account_info(self) -> AccountInfo:
         response = self.client.account_menu()
         return parse_account_menu_response(response)
+
+    def subscribe_channel(self, channel_id: str, subscribe: bool = True) -> Dict[str, Any]:
+        return self.client.subscribe_channel(channel_id=channel_id, subscribe=subscribe)
 
     def like_video(self, video_id: str, like: bool = True) -> Dict[str, Any]:
         return self.client.like_video(video_id=video_id, like=like)
@@ -218,6 +276,10 @@ class YTMusic:
 
     def add_to_playlist(self, playlist_id: str, video_id: str) -> Dict[str, Any]:
         action = {"action": "ACTION_ADD_VIDEO", "addedVideoId": video_id}
+        return self.client.edit_playlist(playlist_id=playlist_id, actions=[action])
+
+    def add_playlist_to_playlist(self, playlist_id: str, add_playlist_id: str) -> Dict[str, Any]:
+        action = {"action": "ACTION_ADD_PLAYLIST", "addedFullListId": add_playlist_id}
         return self.client.edit_playlist(playlist_id=playlist_id, actions=[action])
 
     def remove_from_playlist(
@@ -230,9 +292,93 @@ class YTMusic:
         }
         return self.client.edit_playlist(playlist_id=playlist_id, actions=[action])
 
+    def move_song_playlist(
+        self, playlist_id: str, set_video_id: str, successor_set_video_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        action = {
+            "action": "ACTION_MOVE_VIDEO_AFTER",
+            "setVideoId": set_video_id,
+            "movedSetVideoIdSuccessor": successor_set_video_id,
+        }
+        return self.client.edit_playlist(playlist_id=playlist_id, actions=[action])
+
     def create_playlist(self, title: str) -> str:
         res = self.client.create_playlist(title=title)
         return res.get("playlistId", "")
 
     def delete_playlist(self, playlist_id: str) -> Dict[str, Any]:
         return self.client.delete_playlist(playlist_id=playlist_id)
+
+    def register_playback(
+        self, playback_tracking_url: str, cpn: str, playlist_id: Optional[str] = None
+    ) -> httpx.Response:
+        return self.client.register_playback(
+            playback_url=playback_tracking_url,
+            cpn=cpn,
+            playlist_id=playlist_id,
+        )
+
+    def get_media_info(self, video_id: str) -> MediaInfo:
+        next_data = self.client.next(video_id=video_id, client=WEB)
+
+        results = safe_get(
+            next_data,
+            "contents",
+            "twoColumnWatchNextResults",
+            "results",
+            "results",
+            "content",
+            default=[]
+        )
+
+        title = None
+        author = None
+        author_id = None
+        author_thumbnail = None
+        description = None
+        upload_date = None
+
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+            sec_info = item.get("videoSecondaryInfoRenderer")
+            prim_info = item.get("videoPrimaryInfoRenderer")
+
+            if prim_info:
+                title = extract_runs_text(prim_info.get("title"))
+                upload_date = safe_get(prim_info, "dateText", "simpleText")
+
+            if sec_info:
+                owner = safe_get(sec_info, "owner", "videoOwnerRenderer", default={})
+                author = extract_runs_text(owner.get("title"))
+                author_id = safe_get(owner, "navigationEndpoint", "browseEndpoint", "browseId")
+                author_thumbnail = extract_thumbnail_url(owner.get("thumbnail"))
+                description = safe_get(sec_info, "attributedDescription", "content")
+
+        # Fetch dislike data from ReturnYouTubeDislike API
+        view_count = None
+        likes = None
+        dislikes = None
+        try:
+            with httpx.Client(timeout=10.0) as http:
+                res = http.get(f"https://returnyoutubedislikeapi.com/Votes?videoId={video_id}")
+                if res.status_code == 200:
+                    dislike_data = res.json()
+                    view_count = dislike_data.get("viewCount")
+                    likes = dislike_data.get("likes")
+                    dislikes = dislike_data.get("dislikes")
+        except Exception:
+            pass
+
+        return MediaInfo(
+            video_id=video_id,
+            title=title,
+            author=author,
+            author_id=author_id,
+            author_thumbnail=author_thumbnail,
+            description=description,
+            upload_date=upload_date,
+            view_count=view_count,
+            like=likes,
+            dislike=dislikes,
+        )

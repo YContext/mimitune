@@ -5,12 +5,25 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "opentune-ytmusic"
 version = "0.1.0"
-description = "A Python client library for YouTube Music reverse-engineered from OpenTune's InnerTube implementation"
+description = "A Python client library for YouTube Music, rewritten from the OpenTune Android app's InnerTube implementation"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "GPL-3.0-only" }
 authors = [
-    { name = "OpenTune" }
+    { name = "Arturo Cervantes" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "httpx>=0.24.0",
@@ -22,4 +35,4 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
+include = ["opentune_ytmusic*"]

@@ -1,6 +1,6 @@
 """
 OpenTune YouTube Music API Python Package.
-Reverse-engineered from OpenTune Android App (InnerTube API).
+Rewritten from OpenTune Android App (InnerTube API).
 """
 
 from opentune_ytmusic.models import (

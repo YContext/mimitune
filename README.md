@@ -4,7 +4,7 @@ A Python client library for YouTube Music, rewritten from the [OpenTune](https:/
 
 I really enjoy the [OpenTune](https://github.com/Arturo254/OpenTune) app so I wanted to recreate the API calls in Python.
 
-> **Note:** `mimitune` stands for **mimic [OpenTune](https://github.com/Arturo254/OpenTune)**.
+> **Note:** `mimitune` stands for **mimic OpenTune**.
 
 ## Installation
 
